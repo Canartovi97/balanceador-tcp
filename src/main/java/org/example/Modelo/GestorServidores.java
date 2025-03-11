@@ -4,8 +4,8 @@ import java.net.Socket;
 import java.util.*;
 
 public class GestorServidores {
-    private static final int RANGO_MIN_IP = 1;
-    private static final int RANGO_MAX_IP = 10000;
+    private static final int RANGO_MIN_IP = 6400;
+    private static final int RANGO_MAX_IP = 6500;
     private int contadorIP = RANGO_MIN_IP;
     private final List<Servidor> servidores;
 

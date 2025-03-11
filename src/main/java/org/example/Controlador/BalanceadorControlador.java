@@ -8,7 +8,7 @@ import java.net.*;
 
 public class BalanceadorControlador {
     private static final int PUERTO_BALANCEADOR = 5000;
-    private static final String IP_MONITOREO = "127.0.0.1";
+    private static final String IP_MONITOREO = "localhost";
     private static final int PUERTO_MONITOREO = 54321;
     private final GestorServidores gestorServidores;
 
