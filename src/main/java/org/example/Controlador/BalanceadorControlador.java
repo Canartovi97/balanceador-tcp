@@ -44,29 +44,65 @@ public class BalanceadorControlador {
                 return;
             }
 
-            int puertoAsignado = nuevoServidor.getIpAsignada();
-            System.out.println(" Asignando IP: " + puertoAsignado);
-            salida.println(String.format("%05d", puertoAsignado));
+            int puertoBalanceador = nuevoServidor.getPuertoBalanceador();
+            int puertoMonitoreo = nuevoServidor.getPuertoMonitoreo();
 
-            System.out.println(" Servidor registrado con IP " + puertoAsignado);
-            enviarAlMonitoreo(puertoAsignado);
+            salida.println(puertoBalanceador + " " + puertoMonitoreo);
+            System.out.println("Asignando puertos - Balanceador: " + puertoBalanceador + ", Monitoreo: " + puertoMonitoreo);
+
+            // Notificar al Monitoreo sobre el nuevo servidor
+            enviarServidorAlMonitoreo(puertoMonitoreo);
 
         } catch (IOException e) {
             System.out.println(" Error manejando servidor: " + e.getMessage());
         }
     }
 
-
-    private void enviarAlMonitoreo(int puertoAsignado) {
-        try (Socket socket = new Socket(IP_MONITOREO, PUERTO_MONITOREO);
+    private void enviarServidorAlMonitoreo(int puertoMonitoreo) {
+        try (Socket socket = new Socket("localhost", PUERTO_MONITOREO);
              PrintWriter salida = new PrintWriter(socket.getOutputStream(), true)) {
 
-            String mensaje = "NEW_SERVER " + puertoAsignado;
+            String mensaje = "NEW_SERVER " + puertoMonitoreo;
             salida.println(mensaje);
-            System.out.println("Notificación enviada al monitoreo: " + mensaje);
+            System.out.println("[Balanceador] Notificación enviada al monitoreo: " + mensaje);
 
         } catch (IOException e) {
-            System.out.println("Error al enviar mensaje al monitoreo: " + e.getMessage());
+            System.out.println("[Balanceador] Error al enviar mensaje al monitoreo: " + e.getMessage());
+        }
+    }
+
+    public void iniciarEscuchaMonitoreo() {
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(PUERTO_MONITOREO)) {
+                System.out.println("[Balanceador] Escuchando mensajes del monitoreo en el puerto " + PUERTO_MONITOREO);
+
+                while (true) {
+                    Socket socket = serverSocket.accept();
+                    manejarMensajeMonitoreo(socket);
+                }
+            } catch (IOException e) {
+                System.out.println("[Balanceador] Error en la escucha del monitoreo: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    private void manejarMensajeMonitoreo(Socket socket) {
+        try (
+                BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()))
+        ) {
+            String mensaje = entrada.readLine();
+            System.out.println("[Balanceador] Mensaje recibido del monitoreo: " + mensaje);
+
+            if (mensaje.startsWith("SERVER_DOWN")) {
+                String[] partes = mensaje.split(" ");
+                if (partes.length == 2) {
+                    int puertoInactivo = Integer.parseInt(partes[1]);
+                    gestorServidores.removerServidor(puertoInactivo);
+                    System.out.println("[Balanceador] Servidor en puerto " + puertoInactivo + " eliminado de la lista.");
+                }
+            }
+        } catch (IOException e) {
+            System.out.println("[Balanceador] Error procesando mensaje del monitoreo: " + e.getMessage());
         }
     }
 }

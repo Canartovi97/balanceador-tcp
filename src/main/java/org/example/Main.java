@@ -6,5 +6,6 @@ public class Main {
     public static void main(String[] args) {
         BalanceadorControlador balanceador = new BalanceadorControlador();
         balanceador.iniciarBalanceador();
+        balanceador.iniciarEscuchaMonitoreo();
     }
 }

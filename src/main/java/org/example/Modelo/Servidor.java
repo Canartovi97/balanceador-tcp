@@ -3,35 +3,35 @@ package org.example.Modelo;
 import java.net.Socket;
 
 public class Servidor {
-    private String nombre;
-    private int ipAsignada;
+    private int puertoBalanceador;
+    private int puertoMonitoreo;
     private boolean activo;
     private Socket socket;
 
-    public Servidor(int ipAsignada, Socket socket) {
-        this.nombre = nombre;
-        this.ipAsignada = ipAsignada;
+    public Servidor(int puertoBalanceador, int puertoMonitoreo, Socket socket) {
+        this.puertoBalanceador = puertoBalanceador;
+        this.puertoMonitoreo = puertoMonitoreo;
         this.socket = socket;
         this.activo = true;
     }
 
-    public String getNombre() {
-        return nombre;
+    public int getPuertoBalanceador() {
+        return puertoBalanceador;
     }
 
-    public int getIpAsignada() {
-        return ipAsignada;
+    public int getPuertoMonitoreo() {
+        return puertoMonitoreo;
     }
 
     public boolean isActivo() {
         return activo;
     }
 
-    public Socket getSocket() {
-        return socket;
-    }
-
     public void setActivo(boolean activo) {
         this.activo = activo;
+    }
+
+    public Socket getSocket() {
+        return socket;
     }
 }

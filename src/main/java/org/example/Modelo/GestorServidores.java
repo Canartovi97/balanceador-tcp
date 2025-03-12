@@ -4,9 +4,13 @@ import java.net.Socket;
 import java.util.*;
 
 public class GestorServidores {
-    private static final int RANGO_MIN_IP = 6400;
-    private static final int RANGO_MAX_IP = 6500;
-    private int contadorIP = RANGO_MIN_IP;
+    private static final int RANGO_MIN_BALANCEADOR = 5400;
+    private static final int RANGO_MAX_BALANCEADOR = 5800;
+    private static final int RANGO_MIN_MONITOREO = 6400;
+    private static final int RANGO_MAX_MONITOREO = 6800;
+
+    private int contadorBalanceador = RANGO_MIN_BALANCEADOR;
+    private int contadorMonitoreo = RANGO_MIN_MONITOREO;
     private final List<Servidor> servidores;
 
     public GestorServidores() {
@@ -14,14 +18,22 @@ public class GestorServidores {
     }
 
     public synchronized Servidor agregarServidor(Socket socket) {
-        if (contadorIP > RANGO_MAX_IP) {
+        if (contadorMonitoreo > RANGO_MAX_MONITOREO || contadorBalanceador > RANGO_MAX_BALANCEADOR) {
             System.out.println("No hay más IPs disponibles para asignar.");
             return null;
         }
 
-        Servidor servidor = new Servidor(contadorIP++, socket);
+        int puertoBalanceador = contadorBalanceador++; // Asigna el siguiente puerto en el rango 5400-5800
+        int puertoMonitoreo = contadorMonitoreo++; // Asigna el siguiente puerto en el rango 6400-6800
+
+        Servidor servidor = new Servidor(puertoBalanceador, puertoMonitoreo, socket);
         servidores.add(servidor);
         return servidor;
+    }
+
+    public synchronized void removerServidor(int puertoMonitoreo) {
+        servidores.removeIf(servidor -> servidor.getPuertoMonitoreo() == puertoMonitoreo);
+        System.out.println("[GestorServidores] Eliminado servidor con puerto de monitoreo " + puertoMonitoreo);
     }
 
     public synchronized List<Servidor> obtenerServidoresActivos() {
@@ -34,11 +46,11 @@ public class GestorServidores {
         return activos;
     }
 
-    public synchronized void marcarServidorInactivo(int ip) {
+    public synchronized void marcarServidorInactivo(int puertoMonitoreo) {
         for (Servidor servidor : servidores) {
-            if (servidor.getIpAsignada() == ip) {
+            if (servidor.getPuertoMonitoreo() == puertoMonitoreo) {
                 servidor.setActivo(false);
-                System.out.println("Servidor con IP " + ip + " marcado como inactivo.");
+                System.out.println("Servidor con puerto de monitoreo " + puertoMonitoreo + " marcado como inactivo.");
                 break;
             }
         }
