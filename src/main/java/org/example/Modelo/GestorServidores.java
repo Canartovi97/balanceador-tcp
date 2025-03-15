@@ -9,6 +9,8 @@ public class GestorServidores {
     private static final int RANGO_MIN_MONITOREO = 6400;
     private static final int RANGO_MAX_MONITOREO = 6800;
 
+
+
     private int contadorBalanceador = RANGO_MIN_BALANCEADOR;
     private int contadorMonitoreo = RANGO_MIN_MONITOREO;
     private final List<Servidor> servidores;
@@ -44,6 +46,15 @@ public class GestorServidores {
             }
         }
         return activos;
+    }
+
+    public synchronized Servidor obtenerServidorDisponible() {
+        for (Servidor servidor : servidores) {
+            if (servidor.isActivo()) {
+                return servidor;
+            }
+        }
+        return null;
     }
 
     public synchronized void marcarServidorInactivo(int puertoMonitoreo) {

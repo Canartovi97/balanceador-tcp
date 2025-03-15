@@ -1,33 +1,65 @@
 package org.example.Controlador;
 
 import org.example.Modelo.GestorServidores;
+import org.example.Modelo.GestorUsuarios;
 import org.example.Modelo.Servidor;
+import java.net.ServerSocket;
 
 import java.io.*;
 import java.net.*;
 
 public class BalanceadorControlador {
-    private static final int PUERTO_BALANCEADOR = 5000;
+    private static final int PUERTO_BALANCEADOR_SERVIDORES = 5000;
+    private static final int PUERTO_BALANCEADOR_CLIENTES = 12345;
+    private static final int PUERTO_MONITOREO_BALANCEADOR = 2000;
     private static final String IP_MONITOREO = "localhost";
     private static final int PUERTO_MONITOREO = 54321;
+
+    private ServerSocket serverSocket;
+
     private final GestorServidores gestorServidores;
+    private final GestorUsuarios gestorUsuarios;
 
     public BalanceadorControlador() {
         this.gestorServidores = new GestorServidores();
+        this.gestorUsuarios = new GestorUsuarios();
     }
+
 
     public void iniciarBalanceador() {
-        try (ServerSocket serverSocket = new ServerSocket(PUERTO_BALANCEADOR)) {
-            System.out.println("Balanceador escuchando en el puerto " + PUERTO_BALANCEADOR);
 
-            while (true) {
-                Socket socket = serverSocket.accept();
-                manejarConexionServidor(socket);
+
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(PUERTO_BALANCEADOR_SERVIDORES)) {
+                System.out.println("Balanceador escuchando servidores en el puerto " + PUERTO_BALANCEADOR_SERVIDORES);
+                while (true) {
+                    Socket socket = serverSocket.accept();
+                    manejarConexionServidor(socket);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        }).start();
+
+
+
+
+        new Thread(() -> {
+            try (ServerSocket clientSocket = new ServerSocket(PUERTO_MONITOREO_BALANCEADOR)) {
+                System.out.println("Balanceador escuchando monitoreo de balanceador en el puerto  " + PUERTO_MONITOREO_BALANCEADOR);
+                while (true) {
+                    Socket socket = clientSocket.accept();
+                    /*manejarConexionCliente(socket);*/
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }).start();
+
     }
+
+
+
 
     private void manejarConexionServidor(Socket socket) {
         try (
@@ -105,4 +137,61 @@ public class BalanceadorControlador {
             System.out.println("[Balanceador] Error procesando mensaje del monitoreo: " + e.getMessage());
         }
     }
+
+
+    /*Cambio de conexiones a cliente*/
+
+    public void iniciarEscuchaCliente (){
+        new Thread(() -> {
+            try (ServerSocket serverSocket = new ServerSocket(PUERTO_BALANCEADOR_CLIENTES)) {
+                System.out.println("[Balanceador] Escuchando mensajes del cliente en el puerto " + PUERTO_BALANCEADOR_CLIENTES);
+
+                while (true) {
+                    System.out.println("Entro al while") ;
+                    Socket socket = serverSocket.accept();
+                    System.out.println("paso el server socket acept");
+                    manejarMensajeCliente(socket);
+
+                }
+            } catch (IOException e) {
+                System.out.println("[Balanceador] Error en la escucha del cliente: " + e.getMessage());
+            }
+        }).start();
+    }
+
+    private void manejarMensajeCliente(Socket socketCliente) {
+        System.out.println("Entro a manejar mensajes con el mensaje "+ socketCliente );
+        try (
+                BufferedReader entrada = new BufferedReader(new InputStreamReader(socketCliente.getInputStream()));
+                PrintWriter salida = new PrintWriter(socketCliente.getOutputStream(), true)
+        ) {
+            String mensaje = entrada.readLine();
+            System.out.println("[Balanceador] Mensaje recibido del cliente: " + mensaje);
+
+            Servidor servidorDisponible = (Servidor) gestorServidores.obtenerServidoresActivos();
+            if (servidorDisponible == null) {
+                salida.println("ERROR: No hay servidores disponibles.");
+                return;
+            }
+
+            try (Socket socketServidor = new Socket("localhost", servidorDisponible.getPuertoBalanceador());
+                 PrintWriter salidaServidor = new PrintWriter(socketServidor.getOutputStream(), true);
+                 BufferedReader entradaServidor = new BufferedReader(new InputStreamReader(socketServidor.getInputStream()))) {
+
+                salidaServidor.println(mensaje);
+                String respuestaServidor = entradaServidor.readLine();
+                salida.println(respuestaServidor);
+
+                System.out.println("[Balanceador] Respuesta reenviada al cliente: " + respuestaServidor);
+
+            } catch (IOException e) {
+                salida.println("ERROR: No se pudo conectar con el servidor.");
+                System.out.println("[Balanceador] Error al comunicarse con el servidor: " + e.getMessage());
+            }
+        } catch (IOException e) {
+            System.out.println("[Balanceador] Error en la conexión con el cliente: " + e.getMessage());
+        }
+    }
+
+
 }
