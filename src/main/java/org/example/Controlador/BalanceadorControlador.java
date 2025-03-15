@@ -66,7 +66,7 @@ public class BalanceadorControlador {
                 BufferedReader entrada = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 PrintWriter salida = new PrintWriter(socket.getOutputStream(), true)
         ) {
-            System.out.println(" Servidor conectado desde: " + socket.getInetAddress());
+            System.out.println("Servidor conectado desde: " + socket.getInetAddress());
 
             Servidor nuevoServidor = gestorServidores.agregarServidor(socket);
             if (nuevoServidor == null) {
